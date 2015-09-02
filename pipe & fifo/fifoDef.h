@@ -1,0 +1,2 @@
+
+const char *fifoFile = "./fifoFile";

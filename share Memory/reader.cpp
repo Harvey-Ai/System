@@ -44,7 +44,7 @@ void reader() {
 		buffer_ptr->bufferState = state_write;
 	}
 	buffer_ptr->bufferState = state_idle;
-
+	
 	// detach shared memory
 	shmdt(buffer_ptr);
 }

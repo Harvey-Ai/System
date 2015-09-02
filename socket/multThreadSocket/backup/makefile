@@ -12,5 +12,5 @@ client: client.cpp
 .PHONY: clean
 
 clean:
-	-rm client
-	-rm server
+	@-rm client
+	@-rm server

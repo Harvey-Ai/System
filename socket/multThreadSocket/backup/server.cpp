@@ -15,6 +15,8 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <stropts.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
 using namespace std;
@@ -61,6 +63,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 				perror("fork conn server failed\n");
 			}
 			else if (pid == 0) {
+
 				char sendBuf[bufferSize], recvBuf[bufferSize];
 				memset(sendBuf, 0, sizeof(sendBuf));
 				memset(recvBuf, 0, sizeof(recvBuf));
@@ -68,29 +71,30 @@ void serve(int sockfd, struct addrinfo *aip) {
 				int prefixLen = strlen(recvBuf);
 				int n;
 
-				while(strcmp(sendBuf, "server get end") != 0) {
+				while(1) {
 					if ((n = recvfrom(connfd, recvBuf + prefixLen, bufferSize - prefixLen - 1, MSG_DONTROUTE, NULL, NULL)) < 0) {
 						perror("receive error");
 					}
-
 					recvBuf[n + prefixLen] = '\0';
 					strcpy(sendBuf, recvBuf);
+					if (n == 0 || strcmp(recvBuf, "server get end") == 0) {
+						close(connfd);
+						break;
+					}
+
 					if (sendto(connfd, sendBuf, strlen(recvBuf),  MSG_DONTROUTE, NULL, NULL) < 0) {
 						perror("send error");
 					}
 				}
 
-				close(connfd);
 				printf("client closed, addr: %s, port: %d\n", addrStr, connAddr.sin_port);
-				exit(0);
-
 			} else {
-				int status;
-				waitpid(pid, &status, 0);
 				close(connfd);
 			}
 		}
 	}
+
+	return;
 }
 
 
