@@ -32,7 +32,7 @@ void passMsg(int sockfd, struct addrinfo *aip) {
 	while(strcmp(sendBuf, "end") != 0) {
 		cout << "send: ";
 		cin >> sendBuf;
-		
+
 		assert(sendBuf[bufferSize - 1] == '\0');
 		if (sendto(sockfd, sendBuf, strlen(sendBuf), 0, aip->ai_addr, aip->ai_addrlen) < 0) {
 			perror("send error");
@@ -61,8 +61,8 @@ int main(int argc,char **argv)
 	int sockfd;
 	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 	{
-		 perror("get socket error");
-		 return 0;
+		perror("get socket error");
+		return 0;
 	}
 
 
@@ -94,7 +94,7 @@ int main(int argc,char **argv)
 	if (adList->ai_socktype == SOCK_STREAM) {
 		if(connect(sockfd, adList->ai_addr, sizeof(*(adList->ai_addr))) != 0) {
 			perror("connect error");
-			
+
 			char ipBuf[256];
 			struct sockaddr_in *sinp = (sockaddr_in *)adList->ai_addr;
 			inet_ntop(adList->ai_family, &sinp->sin_addr, ipBuf, 256);
@@ -102,7 +102,7 @@ int main(int argc,char **argv)
 			exit(1);
 		}
 	}
-	
+
 	// pass message
 	passMsg(sockfd, adList);
 

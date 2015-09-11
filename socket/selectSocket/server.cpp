@@ -90,11 +90,11 @@ void serve(int sockfd, struct addrinfo *aip) {
 			perror("unix domain sock listen error");
 			exit(1);
 		}
-		
+
 		struct sockaddr_un unixConnAddr;
 		socklen_t unixConnAddrLen;
 		if ((unixConnFd = accept(unixfd, (sockaddr *)&unixConnAddr, &unixConnAddrLen)) > 0) {
-			
+
 			// only connect client process
 			if (strcmp(unixConnAddr.sun_path, clientName) != 0) {
 				close(unixConnFd);
@@ -103,7 +103,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 				fcntl(unixConnFd, F_SETFL, O_NONBLOCK);
 			}
 		}
-			
+
 		struct sockaddr_in connAddr;
 		socklen_t connAddrLen = addrSize;
 		int connfd;
@@ -115,14 +115,14 @@ void serve(int sockfd, struct addrinfo *aip) {
 			char addrStr[addrSize];
 			inet_ntop(connAddr.sin_family, &(connAddr.sin_addr), addrStr, connAddrLen);
 			printf("client conneted, addr: %s, port: %d\n", addrStr, ntohs(connAddr.sin_port));
-		
+
 			sockSendQ.push_back(connfd);
 
 			if (write_fd(unixConnFd, sockSendQ.back()) >= 0) {
 				printf("send socket %d succuess\n", sockSendQ.back());
 				sockSendQ.pop_back();
 			}
-			
+
 		}
 
 		int status;

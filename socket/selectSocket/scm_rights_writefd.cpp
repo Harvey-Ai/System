@@ -20,38 +20,40 @@
 
 #define CONTROLLEN CMSG_LEN(sizeof(int))
 
-int
-write_fd(int fd, int sendfd)
+int write_fd(int fd, int sendfd)
 {
 	// auxiliary data
-    struct msghdr msg;
+	struct msghdr msg;
 	// data
-    struct iovec iov[1];
+	struct iovec iov[1];
 
 	char buffer[2];
-// #ifdef  HAVE_MSGHDR_MSG_CONTROL
-    struct cmsghdr  *cmptr = (cmsghdr *) malloc(CONTROLLEN);
+	// #ifdef  HAVE_MSGHDR_MSG_CONTROL
+	struct cmsghdr  *cmptr = (cmsghdr *) malloc(CONTROLLEN);
 
-    msg.msg_control = cmptr;
-    msg.msg_controllen = CONTROLLEN;
+	msg.msg_control = cmptr;
+	msg.msg_controllen = CONTROLLEN;
 
-    cmptr = CMSG_FIRSTHDR(&msg);
-    cmptr->cmsg_len = CMSG_LEN(sizeof(int));
-    cmptr->cmsg_level = SOL_SOCKET;
-    cmptr->cmsg_type = SCM_RIGHTS;
-    *((int *) CMSG_DATA(cmptr)) = sendfd;
-/*#else
-    msg.msg_accrights = (caddr_t) &sendfd;
-    msg.msg_accrightslen = sizeof(int);
+	cmptr = CMSG_FIRSTHDR(&msg);
+	cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+	cmptr->cmsg_level = SOL_SOCKET;
+	cmptr->cmsg_type = SCM_RIGHTS;
+	*((int *) CMSG_DATA(cmptr)) = sendfd;
+
+/*
+#else
+	msg.msg_accrights = (caddr_t) &sendfd;
+	msg.msg_accrightslen = sizeof(int);
 #endif
-*/
-    msg.msg_name = NULL;
-    msg.msg_namelen = 0;
+	 */
+	msg.msg_name = NULL;
+	msg.msg_namelen = 0;
 
-    iov[0].iov_base = buffer;
-    iov[0].iov_len = sizeof(buffer);
-    msg.msg_iov = iov;
-    msg.msg_iovlen = 1;
+	iov[0].iov_base = buffer;
+	iov[0].iov_len = sizeof(buffer);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
 
-    return (sendmsg(fd, &msg, 0));
+	return (sendmsg(fd, &msg, 0));
 }
+

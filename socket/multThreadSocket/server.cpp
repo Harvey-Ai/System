@@ -80,7 +80,7 @@ static int setnonblocking (int fd)
 
 void serve(int sockfd, struct addrinfo *aip) {
 	int pid;
-	
+
 	// !!! replace your domain unix socket file
 	char *serverName = "./serverSock";
 	char *clientName = "./clientSock";
@@ -162,7 +162,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 		un.sun_family = AF_UNIX;
 		strcpy(un.sun_path, clientName);
 		int len = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
-		
+
 		// bind client sock
 		if (bind(unixSock, (struct sockaddr *)&un, len) < 0) {
 			perror("domain unix sock bind error");
@@ -196,7 +196,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 
 		// handle data message
 		while(1) {
-			
+
 			int fd = read_fd(unixSock);
 			if (fd != -1) {
 				printf("get socket %d\n", fd);
@@ -282,7 +282,7 @@ int main(int argc,char **argv)
 		exit(1);
 	}
 
-	
+
 	bool serverWork = false;
 	for(addrinfo *adPtr = adList;adPtr != NULL;adPtr = adPtr->ai_next) {
 		if (adPtr->ai_family == AF_INET) {
