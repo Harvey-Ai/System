@@ -62,6 +62,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 	// create epoll & register sockfd listen event
 	int epollFd = epoll_create(10);
 	struct epoll_event ev;
+	// set edge triger and input tirger
 	ev.events = EPOLLIN | EPOLLET;
 	ev.data.fd = sockfd;
 	epoll_ctl(epollFd, EPOLL_CTL_ADD, sockfd, &ev);
@@ -130,7 +131,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 		for(map<int, string>::iterator it = writeBuf.begin();it != writeBuf.end();it++) {
 			int n;
 			// use non block
-			if ((n = sendto(it->first, it->second.c_str(), it->second.size(),  MSG_DONTWAIT, NULL, NULL)) < 0) {
+			if ((n = sendto(it->first, it->second.c_str(), it->second.size(),  MSG_DONTWAIT, NULL, 0)) < 0) {
 				perror("send error");
 			} else {
 				// get left buffer
@@ -150,7 +151,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 int main(int argc,char **argv)
 {
 	if (argc != 3) {
-		perror("Usage: ./server [addr] [port]");
+		printf("Usage: ./server [addr] [port] \n \n");
 		return 0;
 	}
 

@@ -80,8 +80,10 @@ static int setnonblocking (int fd)
 
 void serve(int sockfd, struct addrinfo *aip) {
 	int pid;
-	char *serverName = "/home/ufo008ahw/serverSock";
-	char *clientName = "/home/ufo008ahw/clientSock";
+	
+	// !!! replace your domain unix socket file
+	char *serverName = "./serverSock";
+	char *clientName = "./clientSock";
 
 	if ((pid = fork()) < 0) {
 		perror("fork conn server failed\n");
@@ -91,6 +93,8 @@ void serve(int sockfd, struct addrinfo *aip) {
 			perror("unix socket error");
 			exit(0);
 		}
+
+		// delete domain unix file
 		unlink(serverName);
 
 		struct sockaddr_un un;
@@ -99,10 +103,12 @@ void serve(int sockfd, struct addrinfo *aip) {
 		strcpy(un.sun_path, serverName);
 		int len = offsetof(struct sockaddr_un, sun_path) + strlen(serverName);
 		if (bind(unixfd, (struct sockaddr *)&un, len) < 0) {
-			perror("bind");
+			perror("domain unix sock bind error");
+			exit(1);
 		}
 		if (listen(unixfd, 10) < 0) {
-			perror("listen");
+			perror("domain unix sock listen error");
+			exit(1);
 		}
 
 		struct sockaddr_un unixConnAddr;
@@ -114,37 +120,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 		}
 
 		setnonblocking(unixConnFd);
-		// only connect client process
-		/*
-		   if (strcmp(unixConnAddr.sun_path, clientName) != 0) {
-		   cout << unixConnAddrLen << endl;
-		   cout << unixConnAddr.sun_path << endl;
-		   close(unixConnFd);
-		   cout <<"??" << endl;
-		   } else {
-		   */
 		cout << "unix socket server connect" << endl;
-		//	fcntl(unixConnFd, F_SETFL, O_NONBLOCK);
-		//		break;
-		//		}
-
-
-		/*
-		   int sendfd = socket(AF_INET, SOCK_STREAM, 0);
-		   if (ioctl(temp, I_SENDFD, &sendfd) < 0) {
-		   cout << (errno == EAGAIN) << endl;
-		   cout << (errno == EBADF) << endl;
-		   cout << (errno == EINVAL) << endl;
-		   cout << (errno == ENXIO) << endl;
-		   cout << (errno == ENOTTY) << endl;
-		   cout << errno << endl;		
-		   perror("server ioctl");
-		   cout << "server ioctl: " << aa.sun_path << " " << temp  << " " << sendfd << endl;
-		   printf("strerror: %s\n", strerror(errno));
-		   } else {
-		   cout << "god job!" << endl;
-		   }
-		   */
 
 		struct sockaddr_in connAddr;
 		socklen_t connAddrLen = addrSize;
@@ -172,11 +148,15 @@ void serve(int sockfd, struct addrinfo *aip) {
 
 		int status;
 		waitpid(pid, &status, 0);
-		//	shmctl(shm_id, IPC_RMID, NULL);
 	} else {
+		// delete domain unix file
 		unlink(clientName);
+		int unixSock;
 
-		int unixSock = socket(AF_UNIX, SOCK_STREAM, 0);
+		if ((unixSock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+			perror("domain unix sock error");
+			exit(0);
+		}
 		struct sockaddr_un un;
 		memset(&un, 0, sizeof(un));
 		un.sun_family = AF_UNIX;
@@ -185,7 +165,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 		
 		// bind client sock
 		if (bind(unixSock, (struct sockaddr *)&un, len) < 0) {
-			perror("sock client bind");
+			perror("domain unix sock bind error");
 			exit(0);
 		}
 
@@ -194,22 +174,13 @@ void serve(int sockfd, struct addrinfo *aip) {
 		strcpy(un.sun_path, serverName);
 		len = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
 		if (connect(unixSock, (struct sockaddr *)&un, len) < 0) {
-			perror("unix socket client error\n");
+			perror("domain unix sock connect error");
 			exit(0);
 		}
 
 		// set sock to nonblock
 		setnonblocking(unixSock);
 		cout << "unix sock client connect" << endl;	
-		//fcntl(unixSock, F_SETFL, O_NONBLOCK);
-
-		/*
-		   if (ioctl(fd, I_RECVFD, &recvfd) < 0) {
-		   perror("client ioctl");
-		   cout << "client ioctl: " << un.sun_path << " " << fd  << " " << recvfd.fd << endl;
-		   printf("strerror: %s\n", strerror(errno));
-		   }
-		   */
 
 		// set select to nonblock
 		timeval selectTv;
@@ -223,38 +194,9 @@ void serve(int sockfd, struct addrinfo *aip) {
 		FD_ZERO(&readSet);
 		FD_ZERO(&writeSet);
 
-		/*
-		// attach share memory
-		int shm_id = shmget(shm_key, sizeof(shared_buffer), 0400 | IPC_CREAT);
-		if (shm_id < 0) {
-		perror("get shared memory error!\n");
-		return;
-		}
-		shared_buffer *buffer_ptr = (shared_buffer *)shmat(shm_id, (void *)0, 0);
-		if (buffer_ptr == (void *)-1)
-		{
-		printf("strerror: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-		}
-		*/
-
 		// handle data message
 		while(1) {
-			/*
-			   int fd;
-			   if (buffer_ptr->num > 0) {
-			// !assume atomic
-			fd = buffer_ptr->socket[buffer_ptr->num - 1];
-			buffer_ptr->num--;
-
-			int newfd = dup(fd);
-			fd = recvfd.fd;
-			connSocketSet.insert(fd);
-			FD_SET(fd, &readSet);
-			}
-			*/
-
-			//sleep(1);
+			
 			int fd = read_fd(unixSock);
 			if (fd != -1) {
 				printf("get socket %d\n", fd);
@@ -302,14 +244,13 @@ void serve(int sockfd, struct addrinfo *aip) {
 				}
 
 				if (FD_ISSET(*it, &writeSet)) {
-					if (sendto(*it, writeBuf[*it].c_str(), writeBuf[*it].size(),  MSG_DONTROUTE, NULL, NULL) < 0) {
+					if (sendto(*it, writeBuf[*it].c_str(), writeBuf[*it].size(),  MSG_DONTROUTE, NULL, 0) < 0) {
 						perror("send error");
 					}
 					FD_CLR(*it, &writeSet);
 				}
 			}
 		}
-		// shmdt(buffer_ptr);
 	}
 }
 
@@ -317,7 +258,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 int main(int argc,char **argv)
 {
 	if (argc != 3) {
-		printf("Usage: ./server [addr] [port]");
+		printf("Usage: ./server [addr] [port] \n \n");
 		return 0;
 	}
 
@@ -341,6 +282,7 @@ int main(int argc,char **argv)
 		exit(1);
 	}
 
+	
 	bool serverWork = false;
 	for(addrinfo *adPtr = adList;adPtr != NULL;adPtr = adPtr->ai_next) {
 		if (adPtr->ai_family == AF_INET) {
@@ -361,4 +303,5 @@ int main(int argc,char **argv)
 	freeaddrinfo(adList);
 	close(sockfd);
 	return 0;
-}        
+}
+

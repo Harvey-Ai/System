@@ -21,3 +21,5 @@ clean:
 	@-rm server.o
 	@-rm scm_right_write.o
 	@-rm scm_right_read.o
+	@-rm serverSock
+	@-rm clientSock

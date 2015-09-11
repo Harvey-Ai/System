@@ -51,12 +51,18 @@ void passMsg(int sockfd, struct addrinfo *aip) {
 
 int main(int argc,char **argv)
 {
+	// check argument
+	if (argc != 3) {
+		printf("Usage: ./client [addr] [port] \n \n");
+		return 0;
+	}
+
 	// get socket
 	int sockfd;
 	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 	{
-		perror("socket() error!\n");
-		exit(1);
+		 perror("get socket error");
+		 return 0;
 	}
 
 
@@ -66,31 +72,17 @@ int main(int argc,char **argv)
 	hint.ai_family = AF_INET;
 	hint.ai_socktype = SOCK_STREAM;
 	hint.ai_flags = AI_CANONNAME;
+	// must add!
 	hint.ai_protocol = 0;
 	hint.ai_canonname = 0;
 	hint.ai_addrlen = 0;
 	hint.ai_addr = NULL;
 	hint.ai_next = NULL;
 
+	// !!some leagel addr resolve will block here
 	// argv[1]: host, argv[2]: serve
-	int temp;
-	if ( (temp = getaddrinfo(argv[1], argv[2], &hint, &adList)) != 0) {
-		perror("Get addr info error\n");
-		char aBuf[256];
-
-		perror("ccc");
-		cout << gai_strerror(temp) << endl;
-		
-		struct sockaddr_in *sinp = (sockaddr_in *)adList->ai_addr;
-		
-		cout << (adList == NULL) << endl;
-		//cout << (char *)sinp->sin_addr << endl;
-		//inet_ntop(AF_INET, &sinp->sin_addr, aBuf, 256);
-		/*
-		cout << c << endl;
-		*/
-		cout << "fdsafds" << endl;
-
+	if (getaddrinfo(argv[1], argv[2], &hint, &adList) != 0) {
+		perror("Get addr info error");
 		exit(1);
 	}
 	if (adList == NULL) {
@@ -103,12 +95,10 @@ int main(int argc,char **argv)
 		if(connect(sockfd, adList->ai_addr, sizeof(*(adList->ai_addr))) != 0) {
 			perror("connect error");
 			
-			char aBuf[256];
+			char ipBuf[256];
 			struct sockaddr_in *sinp = (sockaddr_in *)adList->ai_addr;
-			inet_ntop(adList->ai_family, &sinp->sin_addr, aBuf, 256);
-			cout << aBuf << endl;
-			cout << ntohs(sinp->sin_port) << endl;
-			cout << "fdsafds" << endl;
+			inet_ntop(adList->ai_family, &sinp->sin_addr, ipBuf, 256);
+			cout << "client: " << ipBuf << ":" << ntohs(sinp->sin_port) << " connect failed" << endl;
 			exit(1);
 		}
 	}

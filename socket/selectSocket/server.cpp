@@ -48,7 +48,7 @@ int initServer(int sockfd, struct addrinfo *aip) {
 	printf("init server addr: %s, port: %d\n", addrStr, ntohs(addrIn->sin_port));
 
 	if (bind(sockfd, aip->ai_addr, aip->ai_addrlen) < 0) {
-		perror("bind adress error\n");
+		perror("bind adress error");
 		return -1;
 	}
 
@@ -64,15 +64,15 @@ int initServer(int sockfd, struct addrinfo *aip) {
 
 void serve(int sockfd, struct addrinfo *aip) {
 	int pid;
-	char *serverName = "/home/hongweiai/serverSock";
-	char *clientName = "/home/hongweiai/clientSock";
+	char *serverName = "./serverSock";
+	char *clientName = "./clientSock";
 
 	if ((pid = fork()) < 0) {
 		perror("fork conn server failed\n");
 	} else if (pid > 0) {
 		int unixfd, unixConnFd;
 		if ((unixfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
-			perror("unix socket error");
+			perror("unix domain sock error");
 			exit(0);
 		}
 		unlink(serverName);
@@ -83,10 +83,12 @@ void serve(int sockfd, struct addrinfo *aip) {
 		strcpy(un.sun_path, serverName);
 		int len = offsetof(struct sockaddr_un, sun_path) + strlen(serverName);
 		if (bind(unixfd, (struct sockaddr *)&un, len) < 0) {
-			perror("bind");
+			perror("unix domain sock bind error");
+			exit(1);
 		}
 		if (listen(unixfd, 1000) < 0) {
-			perror("listen");
+			perror("unix domain sock listen error");
+			exit(1);
 		}
 		
 		struct sockaddr_un unixConnAddr;
@@ -102,24 +104,6 @@ void serve(int sockfd, struct addrinfo *aip) {
 			}
 		}
 			
-
-		/*
-		   int sendfd = socket(AF_INET, SOCK_STREAM, 0);
-		   if (ioctl(temp, I_SENDFD, &sendfd) < 0) {
-		   cout << (errno == EAGAIN) << endl;
-		   cout << (errno == EBADF) << endl;
-		   cout << (errno == EINVAL) << endl;
-		   cout << (errno == ENXIO) << endl;
-		   cout << (errno == ENOTTY) << endl;
-		   cout << errno << endl;		
-		   perror("server ioctl");
-		   cout << "server ioctl: " << aa.sun_path << " " << temp  << " " << sendfd << endl;
-		   printf("strerror: %s\n", strerror(errno));
-		   } else {
-		   cout << "god job!" << endl;
-		   }
-		 */
-
 		struct sockaddr_in connAddr;
 		socklen_t connAddrLen = addrSize;
 		int connfd;
@@ -143,7 +127,6 @@ void serve(int sockfd, struct addrinfo *aip) {
 
 		int status;
 		waitpid(pid, &status, 0);
-		//	shmctl(shm_id, IPC_RMID, NULL);
 	} else {
 		unlink(clientName);
 
@@ -155,11 +138,9 @@ void serve(int sockfd, struct addrinfo *aip) {
 		int len = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
 		// bind client sock
 		if (bind(unixSock, (struct sockaddr *)&un, len) < 0) {
-			perror("sock client bind");
+			perror("unix domain sock client bind error");
 			exit(0);
 		}
-
-		// set sock to nonblock
 
 		memset(&un, 0, sizeof(un));
 		un.sun_family = AF_UNIX;
@@ -173,51 +154,14 @@ void serve(int sockfd, struct addrinfo *aip) {
 			fcntl(unixSock, F_SETFL, O_NONBLOCK);
 		}
 
-		/*
-		   if (ioctl(fd, I_RECVFD, &recvfd) < 0) {
-		   perror("client ioctl");
-		   cout << "client ioctl: " << un.sun_path << " " << fd  << " " << recvfd.fd << endl;
-		   printf("strerror: %s\n", strerror(errno));
-		   }
-		 */
-
 		map<int, string>  writeBuf;
 		set<int> connSocketSet;
 		fd_set readSet, writeSet;
 		FD_ZERO(&readSet);
 		FD_ZERO(&writeSet);
 
-		/*
-		// attach share memory
-		int shm_id = shmget(shm_key, sizeof(shared_buffer), 0400 | IPC_CREAT);
-		if (shm_id < 0) {
-		perror("get shared memory error!\n");
-		return;
-		}
-		shared_buffer *buffer_ptr = (shared_buffer *)shmat(shm_id, (void *)0, 0);
-		if (buffer_ptr == (void *)-1)
-		{
-		printf("strerror: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-		}
-		 */
-
 		// handle data message
 		while(1) {
-			/*
-			   int fd;
-			   if (buffer_ptr->num > 0) {
-			// !assume atomic
-			fd = buffer_ptr->socket[buffer_ptr->num - 1];
-			buffer_ptr->num--;
-
-			int newfd = dup(fd);
-			fd = recvfd.fd;
-			connSocketSet.insert(fd);
-			FD_SET(fd, &readSet);
-			}
-			*/
-
 			int fd = read_fd(unixSock);
 			if (fd != -1) {
 				printf("get socket %d\n", fd);
@@ -229,7 +173,6 @@ void serve(int sockfd, struct addrinfo *aip) {
 				continue;
 			}
 
-			cout << "?????" << endl;
 			// block, set last parameter to use nonBlock
 			int nfd = select(*(--connSocketSet.end()) + 1, &readSet, NULL, NULL, NULL);
 			if (nfd < 0) {
@@ -263,13 +206,12 @@ void serve(int sockfd, struct addrinfo *aip) {
 				}
 
 				if (FD_ISSET(*it, &writeSet)) {
-					if (sendto(*it, writeBuf[*it].c_str(), writeBuf[*it].size(),  MSG_DONTROUTE, NULL, NULL) < 0) {
+					if (sendto(*it, writeBuf[*it].c_str(), writeBuf[*it].size(),  MSG_DONTROUTE, NULL, 0) < 0) {
 						perror("send error");
 					}
 				}
 			}
 		}
-		// shmdt(buffer_ptr);
 	}
 }
 
@@ -277,7 +219,7 @@ void serve(int sockfd, struct addrinfo *aip) {
 int main(int argc,char **argv)
 {
 	if (argc != 3) {
-		perror("Usage: ./server [addr] [port]");
+		printf("Usage: ./server [addr] [port] \n \n");
 		return 0;
 	}
 
@@ -297,7 +239,7 @@ int main(int argc,char **argv)
 	hint.ai_flags = AI_CANONNAME;
 	// argv[1]: host, argv[2]: serve
 	if (getaddrinfo(argv[1], argv[2], &hint, &adList) != 0) {
-		perror("Get addr info error\n");
+		perror("Get addr info error \n");
 		exit(1);
 	}
 
@@ -321,4 +263,5 @@ int main(int argc,char **argv)
 	freeaddrinfo(adList);
 	close(sockfd);
 	return 0;
-}        
+}
+
